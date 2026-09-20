@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { RefundRecord } from '@/lib/types';
+import { RefundRecord, getReviewStatus, getHumanOverrideDetails } from '@/lib/types';
 import { overrideRefund } from '@/lib/api';
 import {
   X,
@@ -10,6 +10,7 @@ import {
   Cpu,
   FileText,
   User,
+  UserCheck,
   Package,
   History,
   CheckCircle2,
@@ -65,6 +66,8 @@ export function AuditDrawer({ refund, onClose, onOverrideSuccess }: AuditDrawerP
   };
 
   const isEscalated = refund.decision === 'ESCALATED';
+  const status = getReviewStatus(refund);
+  const humanOverride = getHumanOverrideDetails(refund);
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/50 backdrop-blur-xs flex justify-end transition-opacity">
@@ -111,6 +114,48 @@ export function AuditDrawer({ refund, onClose, onOverrideSuccess }: AuditDrawerP
 
         {/* Scrollable Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Attention / Review State Banner */}
+          {status === 'NEEDS_ATTENTION' ? (
+            <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 flex items-center justify-between shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
+                <div>
+                  <p className="font-bold">Awaiting Human Supervisor Action</p>
+                  <p className="text-amber-700 text-[11px]">This claim requires review and a final authorization decision.</p>
+                </div>
+              </div>
+              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-amber-200/80 text-amber-900 border border-amber-300 shrink-0">
+                Unattended
+              </span>
+            </div>
+          ) : status === 'ATTENDED_BY_HUMAN' ? (
+            <div className="p-3.5 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-900 flex items-center justify-between shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <UserCheck className="w-4 h-4 text-indigo-600 shrink-0" />
+                <div>
+                  <p className="font-bold">Attended &amp; Resolved by Human Operator</p>
+                  <p className="text-indigo-700 text-[11px]">{humanOverride?.detail}</p>
+                </div>
+              </div>
+              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 border border-indigo-200 shrink-0">
+                Attended
+              </span>
+            </div>
+          ) : (
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-slate-500 shrink-0" />
+                <div>
+                  <p className="font-semibold">Auto-Resolved by Policy Engine</p>
+                  <p className="text-slate-500 text-[11px]">Evaluated and finalized automatically against authoritative rules.</p>
+                </div>
+              </div>
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-200 text-slate-600 shrink-0">
+                Automated
+              </span>
+            </div>
+          )}
+
           {/* Section: Customer & Ground Truth Context */}
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs space-y-1.5">

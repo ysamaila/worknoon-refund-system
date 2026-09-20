@@ -1,13 +1,15 @@
 'use client';
 
 import React from 'react';
-import { Decision, RefundRecord } from '@/lib/types';
-import { ShieldAlert, Eye, Inbox } from 'lucide-react';
+import { RefundRecord, ReviewStatus, getReviewStatus } from '@/lib/types';
+import { ShieldAlert, Eye, Inbox, UserCheck, CheckCircle2 } from 'lucide-react';
+
+export type ReviewFilter = 'ALL' | ReviewStatus;
 
 interface RefundsTableProps {
   refunds: RefundRecord[];
-  activeFilter?: Decision;
-  onFilterChange: (decision?: Decision) => void;
+  activeFilter: ReviewFilter;
+  onFilterChange: (filter: ReviewFilter) => void;
   onSelectRefund: (refund: RefundRecord) => void;
   selectedRefundId?: string;
   isLoading?: boolean;
@@ -21,39 +23,63 @@ export function RefundsTable({
   selectedRefundId,
   isLoading,
 }: RefundsTableProps) {
-  const filterOptions: { label: string; value?: Decision }[] = [
-    { label: 'All Requests' },
-    { label: 'Escalated (Action Req)', value: 'ESCALATED' },
-    { label: 'Denied', value: 'DENIED' },
-    { label: 'Approved', value: 'APPROVED' },
+  // Compute counts for tabs
+  const needsAttentionCount = refunds.filter((r) => getReviewStatus(r) === 'NEEDS_ATTENTION').length;
+  const attendedCount = refunds.filter((r) => getReviewStatus(r) === 'ATTENDED_BY_HUMAN').length;
+  const autoResolvedCount = refunds.filter((r) => getReviewStatus(r) === 'AUTO_RESOLVED').length;
+
+  const filterOptions: { label: string; value: ReviewFilter; count?: number }[] = [
+    { label: 'All Issues', value: 'ALL', count: refunds.length },
+    { label: 'Needs Attention', value: 'NEEDS_ATTENTION', count: needsAttentionCount },
+    { label: 'Human Resolved', value: 'ATTENDED_BY_HUMAN', count: attendedCount },
+    { label: 'Auto-Resolved', value: 'AUTO_RESOLVED', count: autoResolvedCount },
   ];
+
+  // Filter list by review status
+  const displayedRefunds = refunds.filter((r) => {
+    if (activeFilter === 'ALL') return true;
+    return getReviewStatus(r) === activeFilter;
+  });
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       {/* Table Header Filter Tabs */}
       <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 bg-slate-200/70 p-1 rounded-lg text-xs font-semibold">
-          {filterOptions.map((opt, idx) => {
+          {filterOptions.map((opt) => {
             const isActive = activeFilter === opt.value;
             return (
               <button
-                key={idx}
+                key={opt.value}
                 type="button"
                 onClick={() => onFilterChange(opt.value)}
-                className={`px-3 py-1.5 rounded-md transition-all ${
+                className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${
                   isActive
-                    ? 'bg-white text-slate-900 shadow-xs'
+                    ? 'bg-white text-slate-900 shadow-xs font-bold'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
                 }`}
               >
-                {opt.label}
+                <span>{opt.label}</span>
+                {typeof opt.count === 'number' && (
+                  <span
+                    className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                      opt.value === 'NEEDS_ATTENTION' && opt.count > 0
+                        ? 'bg-amber-100 text-amber-800 font-extrabold'
+                        : isActive
+                        ? 'bg-slate-100 text-slate-700'
+                        : 'bg-slate-300/60 text-slate-600'
+                    }`}
+                  >
+                    {opt.count}
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
 
         <span className="text-xs text-slate-500 font-medium">
-          Showing {refunds.length} recorded claims
+          Showing {displayedRefunds.length} of {refunds.length} recorded claims
         </span>
       </div>
 
@@ -63,11 +89,11 @@ export function RefundsTable({
           <div className="h-10 bg-slate-100 rounded"></div>
           <div className="h-10 bg-slate-100 rounded"></div>
         </div>
-      ) : refunds.length === 0 ? (
+      ) : displayedRefunds.length === 0 ? (
         <div className="p-12 text-center text-slate-500">
           <Inbox className="w-12 h-12 text-slate-300 mx-auto mb-2" />
-          <p className="text-sm font-semibold text-slate-700">No refund claims matching this filter.</p>
-          <p className="text-xs text-slate-400 mt-1">Submit claims from the customer portal to populate this log.</p>
+          <p className="text-sm font-semibold text-slate-700">No issues matching this filter.</p>
+          <p className="text-xs text-slate-400 mt-1">Select another tab to inspect other recorded claims.</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -75,6 +101,7 @@ export function RefundsTable({
             <thead>
               <tr className="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
                 <th className="py-3 px-4">Time</th>
+                <th className="py-3 px-4">Review State</th>
                 <th className="py-3 px-4">Customer</th>
                 <th className="py-3 px-4">Order Ref</th>
                 <th className="py-3 px-4">Extracted Reason</th>
@@ -84,8 +111,9 @@ export function RefundsTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {refunds.map((ref) => {
+              {displayedRefunds.map((ref) => {
                 const isSelected = ref.id === selectedRefundId;
+                const status = getReviewStatus(ref);
                 const formattedTime = new Date(ref.createdAt).toLocaleTimeString([], {
                   hour: '2-digit',
                   minute: '2-digit',
@@ -106,6 +134,26 @@ export function RefundsTable({
                   >
                     <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px] whitespace-nowrap">
                       {formattedTime}
+                    </td>
+
+                    {/* Review State Column */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      {status === 'NEEDS_ATTENTION' ? (
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300 shadow-2xs">
+                          <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
+                          Needs Attention
+                        </span>
+                      ) : status === 'ATTENDED_BY_HUMAN' ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          <UserCheck className="w-3 h-3 text-indigo-600 shrink-0" />
+                          Human Resolved
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-slate-600 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200">
+                          <CheckCircle2 className="w-3 h-3 text-slate-400 shrink-0" />
+                          Auto-Resolved
+                        </span>
+                      )}
                     </td>
 
                     <td className="py-3.5 px-4">

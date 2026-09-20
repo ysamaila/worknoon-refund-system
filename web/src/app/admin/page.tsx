@@ -1,16 +1,16 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Decision, RefundRecord } from '@/lib/types';
+import { RefundRecord, getReviewStatus } from '@/lib/types';
 import { listRefunds } from '@/lib/api';
-import { RefundsTable } from '@/components/admin/refunds-table';
+import { RefundsTable, ReviewFilter } from '@/components/admin/refunds-table';
 import { AuditDrawer } from '@/components/admin/audit-drawer';
 import {
   Shield,
   RefreshCw,
   AlertTriangle,
   CheckCircle,
-  XCircle,
+  UserCheck,
   FileCheck2,
   ExternalLink,
 } from 'lucide-react';
@@ -18,7 +18,7 @@ import Link from 'next/link';
 
 export default function AdminPage() {
   const [refunds, setRefunds] = useState<RefundRecord[]>([]);
-  const [activeFilter, setActiveFilter] = useState<Decision | undefined>(undefined);
+  const [activeFilter, setActiveFilter] = useState<ReviewFilter>('ALL');
   const [selectedRefund, setSelectedRefund] = useState<RefundRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +27,7 @@ export default function AdminPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const res = await listRefunds({ decision: activeFilter, limit: 100 });
+      const res = await listRefunds({ limit: 100 });
       const items = res.items || [];
       setRefunds(items);
       // If a refund is selected, keep it synced without adding selectedRefund to deps
@@ -40,7 +40,7 @@ export default function AdminPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [activeFilter]);
+  }, []);
 
   useEffect(() => {
     fetchRefunds();
@@ -51,11 +51,11 @@ export default function AdminPage() {
     setRefunds((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
   };
 
-  // Metrics summary
+  // Review Status metrics summary
   const totalCount = refunds.length;
-  const escalatedCount = refunds.filter((r) => r.decision === 'ESCALATED').length;
-  const approvedCount = refunds.filter((r) => r.decision === 'APPROVED').length;
-  const deniedCount = refunds.filter((r) => r.decision === 'DENIED').length;
+  const needsAttentionCount = refunds.filter((r) => getReviewStatus(r) === 'NEEDS_ATTENTION').length;
+  const attendedCount = refunds.filter((r) => getReviewStatus(r) === 'ATTENDED_BY_HUMAN').length;
+  const autoResolvedCount = refunds.filter((r) => getReviewStatus(r) === 'AUTO_RESOLVED').length;
 
   return (
     <div className="space-y-6">
@@ -71,7 +71,7 @@ export default function AdminPage() {
             </h1>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Real-time audit log of customer refund requests, deterministic rule traces, and human supervisor escalation controls.
+            Real-time queue of customer refund claims, distinguishing issues needing human attention from resolved claims.
           </p>
         </div>
 
@@ -97,7 +97,12 @@ export default function AdminPage() {
 
       {/* Metrics Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+        <div
+          onClick={() => setActiveFilter('ALL')}
+          className={`bg-white p-4 rounded-xl border shadow-xs cursor-pointer transition-all ${
+            activeFilter === 'ALL' ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-slate-200 hover:border-slate-300'
+          }`}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Claims</span>
             <FileCheck2 className="w-4 h-4 text-slate-400" />
@@ -105,28 +110,52 @@ export default function AdminPage() {
           <p className="text-2xl font-black text-slate-900 mt-1">{totalCount}</p>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-amber-200 shadow-xs bg-amber-50/20">
+        <div
+          onClick={() => setActiveFilter('NEEDS_ATTENTION')}
+          className={`p-4 rounded-xl border shadow-xs cursor-pointer transition-all ${
+            activeFilter === 'NEEDS_ATTENTION'
+              ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/40'
+              : 'border-amber-200 bg-amber-50/20 hover:bg-amber-50/30'
+          }`}
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-amber-700 uppercase tracking-wider">Escalated (Action Req)</span>
+            <span className="text-xs font-medium text-amber-800 uppercase tracking-wider flex items-center gap-1">
+              {needsAttentionCount > 0 && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>}
+              Needs Attention
+            </span>
             <AlertTriangle className="w-4 h-4 text-amber-500" />
           </div>
-          <p className="text-2xl font-black text-amber-700 mt-1">{escalatedCount}</p>
+          <p className="text-2xl font-black text-amber-700 mt-1">{needsAttentionCount}</p>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-emerald-200 shadow-xs bg-emerald-50/20">
+        <div
+          onClick={() => setActiveFilter('ATTENDED_BY_HUMAN')}
+          className={`p-4 rounded-xl border shadow-xs cursor-pointer transition-all ${
+            activeFilter === 'ATTENDED_BY_HUMAN'
+              ? 'border-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-50/40'
+              : 'border-indigo-200 bg-indigo-50/20 hover:bg-indigo-50/30'
+          }`}
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-emerald-700 uppercase tracking-wider">Approved</span>
+            <span className="text-xs font-medium text-indigo-800 uppercase tracking-wider">Human Resolved</span>
+            <UserCheck className="w-4 h-4 text-indigo-600" />
+          </div>
+          <p className="text-2xl font-black text-indigo-700 mt-1">{attendedCount}</p>
+        </div>
+
+        <div
+          onClick={() => setActiveFilter('AUTO_RESOLVED')}
+          className={`p-4 rounded-xl border shadow-xs cursor-pointer transition-all ${
+            activeFilter === 'AUTO_RESOLVED'
+              ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/40'
+              : 'border-emerald-200 bg-emerald-50/20 hover:bg-emerald-50/30'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-emerald-800 uppercase tracking-wider">Auto-Resolved</span>
             <CheckCircle className="w-4 h-4 text-emerald-500" />
           </div>
-          <p className="text-2xl font-black text-emerald-700 mt-1">{approvedCount}</p>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl border border-rose-200 shadow-xs bg-rose-50/20">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-rose-700 uppercase tracking-wider">Denied</span>
-            <XCircle className="w-4 h-4 text-rose-500" />
-          </div>
-          <p className="text-2xl font-black text-rose-700 mt-1">{deniedCount}</p>
+          <p className="text-2xl font-black text-emerald-700 mt-1">{autoResolvedCount}</p>
         </div>
       </div>
 

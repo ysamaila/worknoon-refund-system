@@ -72,3 +72,29 @@ export type RefundRecord = {
   customer?: Customer;
   order?: Order | null;
 };
+
+export type ReviewStatus = 'NEEDS_ATTENTION' | 'ATTENDED_BY_HUMAN' | 'AUTO_RESOLVED';
+
+export function getReviewStatus(refund: RefundRecord): ReviewStatus {
+  const hasHumanOverride =
+    Array.isArray(refund.policyTrace) &&
+    refund.policyTrace.some((r) => r.ruleId === 'HUMAN-OVERRIDE');
+
+  if (hasHumanOverride) {
+    return 'ATTENDED_BY_HUMAN';
+  }
+  if (refund.decision === 'ESCALATED') {
+    return 'NEEDS_ATTENTION';
+  }
+  return 'AUTO_RESOLVED';
+}
+
+export function getHumanOverrideDetails(refund: RefundRecord): { detail: string; timestamp?: string } | null {
+  if (!Array.isArray(refund.policyTrace)) return null;
+  const overrideRule = refund.policyTrace.find((r) => r.ruleId === 'HUMAN-OVERRIDE');
+  if (!overrideRule) return null;
+  return {
+    detail: overrideRule.detail,
+    timestamp: (overrideRule as any).timestamp,
+  };
+}
