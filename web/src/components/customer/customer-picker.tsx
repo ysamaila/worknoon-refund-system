@@ -46,7 +46,7 @@ export function CustomerPicker({
       >
         {customers.map((c) => (
           <option key={c.id} value={c.id}>
-            {c.name} ({c.email}) {c.tier === 'PREMIUM' ? '★ VIP' : ''} {c.riskFlag ? '⚠️ Flagged' : ''}
+            {c.name} ({c.email}) {c.tier === 'PREMIUM' ? '[VIP]' : ''} {c.riskFlag ? '[Flagged]' : ''}
           </option>
         ))}
       </select>
