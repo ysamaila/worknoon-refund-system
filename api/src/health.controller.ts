@@ -1,11 +1,11 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Inject } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { EnvService } from './config/env.service';
 
 @ApiTags('Health')
 @Controller('api/health')
 export class HealthController {
-  constructor(private readonly envService: EnvService) {}
+  constructor(@Inject(EnvService) private readonly envService: EnvService) {}
 
   @Get()
   @ApiOperation({ summary: 'System Health and Diagnostics' })

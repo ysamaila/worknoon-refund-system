@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -9,7 +10,7 @@ const logger = new Logger('SwaggerExport');
 
 async function exportSwagger() {
   logger.log('Bootstrapping NestJS application context...');
-  const app = await NestFactory.create(AppModule, { logger: false });
+  const app = await NestFactory.create(AppModule, { abortOnError: false });
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Worknoon Customer Support Refund API')
@@ -40,6 +41,6 @@ async function exportSwagger() {
 }
 
 exportSwagger().catch((err) => {
-  logger.error('Swagger export failed:', err);
+  console.error('[SwaggerExport Error]:', err);
   process.exit(1);
 });

@@ -203,7 +203,10 @@ export const RULES: PolicyRule[] = [
     id: 'RP-004',
     title: 'High-Value Threshold',
     evaluate: (input: PolicyInput): RuleVerdict => {
-      const amount = input.requestedAmount ?? input.order?.totalAmount ?? 0;
+      const dbAmount = input.order?.totalAmount ?? 0;
+      const requested = input.requestedAmount ?? 0;
+      // Authoritative ground truth: database order total cannot be bypassed by customer-asserted amount
+      const amount = Math.max(dbAmount, requested);
       if (amount > 500) {
         return {
           ruleId: 'RP-004',
