@@ -62,6 +62,10 @@ export function validateReplyConsistency(
   return { isValid: true };
 }
 
+function sanitizeReply(text: string): string {
+  return text.replace(/--/g, ' - ').replace(/—/g, ' - ');
+}
+
 /**
  * Resolves the final customer reply.
  * If the model draft is consistent, returns it; otherwise returns the secure deterministic template.
@@ -72,7 +76,7 @@ export function resolveCustomerReply(
 ): { reply: string; usedFallback: boolean; fallbackReason?: string } {
   if (!draftReply || typeof draftReply !== 'string' || draftReply.trim().length === 0) {
     return {
-      reply: TEMPLATED_REPLIES[ctx.decision](ctx),
+      reply: sanitizeReply(TEMPLATED_REPLIES[ctx.decision](ctx)),
       usedFallback: true,
       fallbackReason: 'AI driver returned empty or null draft.',
     };
@@ -81,14 +85,14 @@ export function resolveCustomerReply(
   const check = validateReplyConsistency(draftReply, ctx.decision);
   if (!check.isValid) {
     return {
-      reply: TEMPLATED_REPLIES[ctx.decision](ctx),
+      reply: sanitizeReply(TEMPLATED_REPLIES[ctx.decision](ctx)),
       usedFallback: true,
       fallbackReason: check.reason,
     };
   }
 
   return {
-    reply: draftReply.trim(),
+    reply: sanitizeReply(draftReply.trim()),
     usedFallback: false,
   };
 }

@@ -15,7 +15,8 @@ CRITICAL INSTRUCTIONS:
 4. If the decision is "ESCALATED":
    - Explain that their request has been routed to a senior support supervisor for manual review (e.g. high-value claim or account exception).
    - Provide an estimated response timeframe of 24 business hours.
-5. Keep the tone professional, concise, and empathetic (2-4 sentences max).`;
+5. Keep the tone professional, concise, and empathetic (2-4 sentences max).
+6. Do NOT use double hyphens (--) or em-dashes in your response. Use simple, standard punctuation.`;
 
 export function buildReplyUserPrompt(ctx: ReplyContext): string {
   const triggeredRule = ctx.ruleTrace.find((r) => r.outcome !== 'PASS');
