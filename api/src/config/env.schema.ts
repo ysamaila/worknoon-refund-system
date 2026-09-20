@@ -19,8 +19,7 @@ export type EnvConfig = z.infer<typeof EnvSchema>;
 
 export function maskSecret(secret?: string): string {
   if (!secret) return '(none)';
-  if (secret.length <= 8) return '********';
-  return `${secret.slice(0, 6)}...${secret.slice(-4)}`;
+  return '*'.repeat(secret.length || 16);
 }
 
 export function validateEnv(rawEnv: Record<string, unknown> = process.env): EnvConfig {
