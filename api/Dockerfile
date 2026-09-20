@@ -1,0 +1,47 @@
+# Stage 1: Build & compile
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install build dependencies
+COPY package*.json ./
+COPY prisma ./prisma/
+
+RUN npm ci
+RUN npx prisma generate
+
+COPY tsconfig*.json ./
+COPY src ./src/
+
+RUN npm run build
+
+# Stage 2: Production runner
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+RUN apk add --no-cache openssl
+
+ENV NODE_ENV=production
+ENV PORT=4000
+
+COPY package*.json ./
+COPY prisma ./prisma/
+
+# Install only production dependencies + prisma CLI for db push
+RUN npm ci --omit=dev && npm install -g prisma
+
+# Copy generated Prisma Client and compiled application
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/dist ./dist
+
+# Copy entrypoint script
+COPY docker-entrypoint.sh ./
+RUN chmod +x docker-entrypoint.sh
+# Fix CRLF to LF in case written on Windows
+RUN sed -i 's/\r$//' docker-entrypoint.sh
+
+EXPOSE 4000
+
+ENTRYPOINT ["/bin/sh", "/app/docker-entrypoint.sh"]
