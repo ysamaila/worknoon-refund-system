@@ -1,0 +1,44 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/health": {
+      "get": {
+        "operationId": "HealthController_getHealth",
+        "summary": "System Health and Diagnostics",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "System operational status and active AI driver configuration"
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Worknoon Customer Support Refund API",
+    "description": "Deterministic policy engine and AI-assisted refund authorization platform REST API",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "Health",
+      "description": "Service health & configuration diagnostics"
+    },
+    {
+      "name": "Refunds",
+      "description": "Refund submission, processing & human override"
+    },
+    {
+      "name": "Customers",
+      "description": "Customer profile & order history"
+    }
+  ],
+  "servers": [],
+  "components": {
+    "schemas": {}
+  }
+}
