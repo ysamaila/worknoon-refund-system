@@ -30,7 +30,7 @@ async function exportSwagger() {
     throw new Error('Generated Swagger document contains no paths or endpoints!');
   }
 
-  const outputPath = path.resolve(__dirname, '../../swagger.json');
+  const outputPath = path.resolve(process.cwd(), 'swagger.json');
   fs.writeFileSync(outputPath, JSON.stringify(document, null, 2), 'utf-8');
 
   logger.log(`Successfully exported Swagger document to: ${outputPath}`);

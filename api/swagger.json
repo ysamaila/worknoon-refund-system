@@ -15,6 +15,220 @@
           "Health"
         ]
       }
+    },
+    "/api/customers": {
+      "get": {
+        "operationId": "CustomersController_listCustomers",
+        "summary": "List all customers for demo selector",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Array of customer accounts"
+          }
+        },
+        "tags": [
+          "Customers"
+        ]
+      }
+    },
+    "/api/customers/{id}": {
+      "get": {
+        "operationId": "CustomersController_getCustomer",
+        "summary": "Get customer details by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customer details with orders"
+          },
+          "404": {
+            "description": "Customer not found"
+          }
+        },
+        "tags": [
+          "Customers"
+        ]
+      }
+    },
+    "/api/customers/{id}/orders": {
+      "get": {
+        "operationId": "CustomersController_getCustomerOrders",
+        "summary": "Get order history for a customer",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of customer orders with item details"
+          },
+          "404": {
+            "description": "Customer not found"
+          }
+        },
+        "tags": [
+          "Customers"
+        ]
+      }
+    },
+    "/api/refunds": {
+      "post": {
+        "operationId": "RefundsController_createRefund",
+        "summary": "Submit a refund request through the 9-stage pipeline",
+        "description": "Processes free-text customer request through prompt injection check, AI intent extraction, authoritative database lookup, deterministic policy evaluation, AI reply drafting, and consistency verification.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRefundDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Refund evaluated and persisted with full rule and AI traces"
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "404": {
+            "description": "Customer not found"
+          }
+        },
+        "tags": [
+          "Refunds"
+        ]
+      },
+      "get": {
+        "operationId": "RefundsController_listRefunds",
+        "summary": "List refunds for the admin dashboard",
+        "parameters": [
+          {
+            "name": "decision",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "APPROVED",
+                "DENIED",
+                "ESCALATED"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of refunds"
+          }
+        },
+        "tags": [
+          "Refunds"
+        ]
+      }
+    },
+    "/api/refunds/{id}": {
+      "get": {
+        "operationId": "RefundsController_getRefundById",
+        "summary": "Get full audit detail of a refund request by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete refund record with segregated policy and AI traces"
+          },
+          "404": {
+            "description": "Refund request not found"
+          }
+        },
+        "tags": [
+          "Refunds"
+        ]
+      }
+    },
+    "/api/refunds/{id}/override": {
+      "post": {
+        "operationId": "RefundsController_overrideRefund",
+        "summary": "Human escalation override",
+        "description": "Allows human support supervisors to manually approve or deny an escalated refund claim.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OverrideRefundDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Refund status updated and override audit appended"
+          },
+          "400": {
+            "description": "Invalid override verdict or missing explanation"
+          },
+          "404": {
+            "description": "Refund request not found"
+          }
+        },
+        "tags": [
+          "Refunds"
+        ]
+      }
     }
   },
   "info": {
@@ -39,6 +253,65 @@
   ],
   "servers": [],
   "components": {
-    "schemas": {}
+    "schemas": {
+      "CreateRefundDto": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "Customer UUID submitting the request",
+            "example": "c1000000-0000-0000-0000-000000000001"
+          },
+          "orderNumber": {
+            "type": "string",
+            "description": "Optional order number (e.g. WN-10001). Can be omitted if included in message.",
+            "example": "WN-10001"
+          },
+          "rawMessage": {
+            "type": "string",
+            "description": "Exact free-form message submitted by the customer",
+            "example": "My order WN-10001 arrived with a broken headphone band."
+          },
+          "isPartialClaim": {
+            "type": "boolean",
+            "description": "Whether this claim is a partial refund on a multi-item order",
+            "default": false
+          }
+        },
+        "required": [
+          "customerId",
+          "rawMessage"
+        ]
+      },
+      "OverrideRefundDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "description": "Manual human resolution verdict",
+            "enum": [
+              "APPROVED",
+              "DENIED"
+            ],
+            "example": "APPROVED"
+          },
+          "overrideReason": {
+            "type": "string",
+            "description": "Mandatory justification for overriding the automated escalation",
+            "example": "Verified customer returned product with tracking number 1Z9999999999. Approved goodwill refund."
+          },
+          "operatorName": {
+            "type": "string",
+            "description": "Name or identifier of the human operator performing the override",
+            "default": "Support Supervisor",
+            "example": "Jane Doe (Fraud Lead)"
+          }
+        },
+        "required": [
+          "decision",
+          "overrideReason"
+        ]
+      }
+    }
   }
 }

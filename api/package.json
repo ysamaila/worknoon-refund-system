@@ -16,7 +16,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
-    "swagger:export": "tsx src/scripts/export-swagger.ts"
+    "swagger:export": "npm run build && node dist/src/scripts/export-swagger.js"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
