@@ -7,7 +7,7 @@
     "build": "tsc -p tsconfig.build.json",
     "format": "prettier --write \"src/**/*.ts\"",
     "start": "node dist/src/main",
-    "start:dev": "tsx watch src/main.ts",
+    "start:dev": "npm run build && node dist/src/main",
     "start:prod": "node dist/src/main",
     "lint": "eslint \"{src,prisma}/**/*.ts\"",
     "test": "vitest run",
