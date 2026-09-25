@@ -12,8 +12,29 @@ async function bootstrap() {
   const envService = app.get(EnvService);
 
   // Configure CORS
+  const allowedOrigins: (string | RegExp)[] = [
+    envService.frontendUrl,
+    envService.frontendUrl.replace(/\/$/, ''),
+    /^http:\/\/localhost:300\d$/,
+    /^https:\/\/.*\.onrender\.com$/,
+  ];
+
   app.enableCors({
-    origin: [envService.frontendUrl, /^http:\/\/localhost:300\d$/],
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const isAllowed = allowedOrigins.some((allowed) => {
+        if (!allowed) return false;
+        if (typeof allowed === 'string') {
+          return allowed.replace(/\/$/, '') === origin.replace(/\/$/, '');
+        }
+        return allowed.test(origin);
+      });
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
     credentials: true,
   });
 
