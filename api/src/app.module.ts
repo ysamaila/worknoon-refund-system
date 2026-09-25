@@ -7,6 +7,7 @@ import { CustomersModule } from './modules/customers/customers.module';
 import { RefundsModule } from './modules/refunds/refunds.module';
 import { HealthController } from './health.controller';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { KeepAliveService } from './common/services/keep-alive.service';
 
 @Module({
   imports: [ConfigModule, PrismaModule, AiModule, CustomersModule, RefundsModule],
@@ -16,6 +17,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,
     },
+    KeepAliveService,
   ],
 })
 export class AppModule {}
